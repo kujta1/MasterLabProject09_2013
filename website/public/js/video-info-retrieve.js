@@ -37,9 +37,9 @@ $(document).ready(function () {
             success: function (data) {
                 $xml = $(data);
                 var title = $xml.find("title");
-                title = title[0].innerHTML; // because there are two title-elements in the response
-                $("#video-title").val(title);
-                $("#video-title").prop('disabled', false);
+                var title = $xml.find("title")[0]; //there is a list of titles , rewrite query?
+                $("#video-title").val(title.textContent);
+
 
                 var desc = $xml.find("media\\:description, description");
                 $("#video-description").val(desc.text());
