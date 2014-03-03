@@ -45,6 +45,7 @@ function flipMainPanel() {
             },
             onReverseFinish:function(){
                 updateTimeline(lastVideoUpdate);
+                asyncTimelineUpdate();
                 initNoteFlip();
                 initManualSlideButtons();
             }
@@ -145,7 +146,7 @@ function initializeTimeline(videoId) {
     $.getJSON("/notes/"+videoId, function (data) {
         $.each(data.elements, function (index, note) {
             if (note.title !== "" || note.content !== "") {
-                addNoteToNoteCollection(note)
+                addNoteToNoteCollection(note);
             }
         });
     });
@@ -158,9 +159,15 @@ function initializeTimeline(videoId) {
  */
 function addNoteToNoteCollection(note) {
     allNotes.push(note);
-    updateTimeline(lastVideoUpdate);
-}
+    if (timelineIsSynced) {
+        updateTimeline(lastVideoUpdate);
+    } 
+    else { 
+        asyncTimelineUpdate();
 
+    }
+
+}
 /**
  * Auto resize all note-boxes when browser gets resized
  */
@@ -204,6 +211,7 @@ function setTimelineBoxSizes(){
  */
 function updateTimeline(currentVideoTime) {
     if( !timelineIsSynced ) {
+        // Filter notes
         return;
     }
 
@@ -219,7 +227,7 @@ function updateTimeline(currentVideoTime) {
     allNotes.forEach(function(note) {
         if(note.startTime+periodLength < currentVideoTime) {
             addNoteToTimeline('pastNotes', note);
-        } else if (note.startTime+periodLength <= (currentVideoTime+periodLength)) {
+        } else if ((note.startTime+periodLength >= currentVideoTime) && (note.startTime+periodLength <= (currentVideoTime+periodLength))) {
             addNoteToTimeline('currentNotes', note);
         } else {
             addNoteToTimeline('futureNotes', note);
@@ -259,34 +267,27 @@ function addManualSlideButtons() {
     leftButton = '<div class="manualSlideButton btn btn-danger pull-left" id="scrollLeft" '+leftButtonDisabled+'>&laquo;</div>';
     rightButton = '<div class="manualSlideButton btn btn-danger pull-right" id="scrollRight" '+rightButtonDisabled+'>&raquo;</div>';
 
-    $('#currentNotes').prepend("<div class='clearfix'></div>").prepend(rightButton).prepend(leftButton);
+    $('#currentNotes').prepend("<div class='clearfix' id='div-btwn-btn-notes'></div>").prepend(rightButton).prepend(leftButton);
 
     initManualSlideButtons();
 }
 
 function initManualSlideButtons() {
     $('#scrollLeft').click(function() {
-        // if(currentPeriodStart-periodLength <= lastVideoUpdate && currentPeriodStart > lastVideoUpdate) {
-        //     syncTimelineWithVideo();
-        // } else {
+
             checkSyncMode();
             currentPeriodStart = Math.max(0, currentPeriodStart-periodLength);
             asyncTimelineUpdate();
             changeDisplayTimeToPeriod();
-        // }
     });
 
     $('#scrollRight').click(function() {
-        // if(currentPeriodStart+periodLength <= lastVideoUpdate && currentPeriodStart+2*periodLength > lastVideoUpdate) {
-        //     syncTimelineWithVideo();
-        // } else {
             checkSyncMode();
             // currentPeriodStart = Math.min(Math.floor(player.getDuration()-periodLength), currentPeriodStart+periodLength);
             currentPeriodStart = Math.min(Math.floor(player.getDuration()-periodLength), currentPlayerTimeFlag?Math.floor(player.getCurrentTime()):currentPeriodStart+periodLength);
             currentPlayerTimeFlag = false;
             asyncTimelineUpdate();
             changeDisplayTimeToPeriod();
-        // }
     });
 }
 
@@ -326,14 +327,14 @@ function syncTimelineWithVideo() {
 
 function asyncTimelineUpdate() {
     $('.note').remove();
-
+    
     // Filter notes
     allNotes.forEach(function(note) {
         if(note.startTime < currentPeriodStart) {
             addNoteToTimeline('pastNotes', note);
         } else if ((note.startTime >= currentPeriodStart)&&(note.startTime <= (currentPeriodStart+periodLength))) {
             addNoteToTimeline('currentNotes', note);
-        } else {
+        } else if (note.startTime > currentPeriodStart+periodLength){
             addNoteToTimeline('futureNotes', note);
         }
     });
@@ -349,10 +350,11 @@ function asyncTimelineUpdate() {
     if( $('#futureNotes .note').length <= 0 ) {
         $('#futureNotes').html(noFutureNotesText);
     }
-    addManualSlideButtons();
-
-    setTimer();
+    
     initNoteFlip();
+    addManualSlideButtons();
+    // setTimer(); //TODO: Test if it is a legacy code
+
 }
 
 /**
@@ -381,14 +383,14 @@ function addNoteToTimeline(dom, note) {
             $('#futureNotes #note'+note.fakeId).remove();
             break;
     }
-
+    
     $('#'+dom+' .noNotesText').hide();
     var prevNote = findPrevNote(dom, note.startTime);
-
-    if (prevNote !== null) { // prevNote found, add after the prevNote
-        prevNote.after(createNote(note));
+    var newNote = createNote(note)
+    if (prevNote != null) { // prevNote found, add after the prevNote
+        prevNote.after(newNote);
     } else { // no notes found, add at beginning of timeline
-        $("#timeline #"+dom).prepend(createNote(note));
+        $("#timeline #"+dom+" .noNotesText").before($(newNote));
     }
     $('#note'+note.fakeId).fadeIn();
 }
@@ -416,9 +418,8 @@ function createNote(note) {
     } else {
         content = note.content;
     }
-
-    return "<div style='display:none' id='note"+note.fakeId+"' class='note' data-start='" + note.startTime + "' data-user='"+username+"' data-content='"+content+"'>" +
-                "<p>" + title + " </p><span class='note-time'>"+ convertSecToTime(note.startTime)+"</span>"
+    return "<div id='note"+note.fakeId+"' class='note' data-start='" + note.startTime + "' data-user='"+username+"' data-content='"+content+"'>" +
+                "<p>" + title + " </p><span class='note-time'>"+ convertSecToTime(note.startTime)+"</span>"+
            "</div>";
 }
 

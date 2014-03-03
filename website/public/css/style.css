@@ -295,10 +295,11 @@ span.note-time>a{
 
 span.note-title{
     position: relative;
-    bottom: 5px;
+    bottom: 9px;
     right: 5px;
     font-size: 13px;
     font-weight: bolder;
+    float:left;
 }
 
 .noteBlock>.panel-heading>span.note-time{
