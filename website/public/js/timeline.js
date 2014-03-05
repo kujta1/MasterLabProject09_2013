@@ -8,6 +8,7 @@ var addNoteTime         = 0;
 var timelineIsSynced    = true;
 var mainPanelFlipped    = false;
 var optionsFlipped      = false;
+var currentPlayerTimeFlag = true;
 
 var lastClickedNote     = null;
 
@@ -44,6 +45,7 @@ function flipMainPanel() {
             },
             onReverseFinish:function(){
                 updateTimeline(lastVideoUpdate);
+                asyncTimelineUpdate();
                 initNoteFlip();
                 initManualSlideButtons();
             }
@@ -64,7 +66,6 @@ function flipMainPanel() {
 function initNoteFlip() {
     $('.note').click(function(){
         var note = $(this);
-
         if( lastClickedNote == note.attr('id') ) {
             revertOptionsFlip();
         } else if(optionsFlipped === false || lastClickedNote != $(this).attr('id')) {
@@ -72,7 +73,8 @@ function initNoteFlip() {
             title   = note.children('p').html();
             content = note.data('content');
             user    = note.data('user');
-            noteContent = prettifyNoteContent(title, content, user);
+            time = note.data("start");
+            noteContent = prettifyNoteContent(title, content, user, time);
 
             $("#optionsPanel").flippy({
                 verso: noteContent,
@@ -100,6 +102,11 @@ function initNoteFlip() {
                         player.seekTo(startTime);
                         updateTimeline(startTime);
                     });
+                    $('#timeJumpBtn').click(function(){
+                        var startTime = $('#'+lastClickedNote).data('start');
+                        player.seekTo(startTime);
+                        updateTimeline(startTime);
+                    });
                 }
             });
             optionsFlipped = true;
@@ -121,11 +128,15 @@ function revertOptionsFlip() {
     optionsFlipped = false;
 }
 
-function prettifyNoteContent(title, content, user) {
+function prettifyNoteContent(title, content, user, time) {
     return  '<div class="noteBlock panel panel-default">' +
-                '<div class="panel-heading">'+'<span id="closeNoteBlock" class="glyphicon glyphicon-remove pull-right"></span>'+title+'</div>'
-                '<div class="panel-body">'+content+'</div>' +
-                '<div class="panel-footer">by '+user+' <span id="jumpBtn" class="label label-danger">Jump</span></div>' +
+                '<div class="panel-heading"><span id="closeNoteBlock" class="glyphicon glyphicon-remove pull-right"></span>'+
+                '<span class="note-title">'+title+'</span>'+
+                '<span class="note-time">by <a href="javascript:void(0);">'+ user +'</a> at <a href="javascript:void(0);" id="timeJumpBtn">'+convertSecToTime(time)+'</a></span>'+
+                '</div>'+
+                '<div class="panel-content">'+content+'</div>' +
+                '<div class="panel-footer"><div class="btn-group"><button class="btn btn-default btn-xs dropdown-toggle" type="button" data-toggle="dropdown">Options <span class="caret"></span></button><ul class="dropdown-menu"><li><a href="#">Share</a></li><li><a href="#">Details</a></li><li class="divider"></li><li><a href="#">Delete</a></li></ul></div>'+
+                '<button class="btn btn-danger btn-xs" id="jumpBtn">Jump</button></div>' +
             '</div>'
 }
 /**
@@ -135,7 +146,7 @@ function initializeTimeline(videoId) {
     $.getJSON("/notes/"+videoId, function (data) {
         $.each(data.elements, function (index, note) {
             if (note.title !== "" || note.content !== "") {
-                addNoteToNoteCollection(note)
+                addNoteToNoteCollection(note);
             }
         });
     });
@@ -148,9 +159,15 @@ function initializeTimeline(videoId) {
  */
 function addNoteToNoteCollection(note) {
     allNotes.push(note);
-    updateTimeline(lastVideoUpdate);
-}
+    if (timelineIsSynced) {
+        updateTimeline(lastVideoUpdate);
+    } 
+    else { 
+        asyncTimelineUpdate();
 
+    }
+
+}
 /**
  * Auto resize all note-boxes when browser gets resized
  */
@@ -194,6 +211,7 @@ function setTimelineBoxSizes(){
  */
 function updateTimeline(currentVideoTime) {
     if( !timelineIsSynced ) {
+        // Filter notes
         return;
     }
 
@@ -209,7 +227,7 @@ function updateTimeline(currentVideoTime) {
     allNotes.forEach(function(note) {
         if(note.startTime+periodLength < currentVideoTime) {
             addNoteToTimeline('pastNotes', note);
-        } else if (note.startTime+periodLength <= (currentVideoTime+periodLength)) {
+        } else if ((note.startTime+periodLength >= currentVideoTime) && (note.startTime+periodLength <= (currentVideoTime+periodLength))) {
             addNoteToTimeline('currentNotes', note);
         } else {
             addNoteToTimeline('futureNotes', note);
@@ -249,32 +267,27 @@ function addManualSlideButtons() {
     leftButton = '<div class="manualSlideButton btn btn-danger pull-left" id="scrollLeft" '+leftButtonDisabled+'>&laquo;</div>';
     rightButton = '<div class="manualSlideButton btn btn-danger pull-right" id="scrollRight" '+rightButtonDisabled+'>&raquo;</div>';
 
-    $('#currentNotes').prepend("<div class='clearfix'></div>").prepend(rightButton).prepend(leftButton);
+    $('#currentNotes').prepend("<div class='clearfix' id='div-btwn-btn-notes'></div>").prepend(rightButton).prepend(leftButton);
 
     initManualSlideButtons();
 }
 
 function initManualSlideButtons() {
     $('#scrollLeft').click(function() {
-        if(currentPeriodStart-periodLength <= lastVideoUpdate && currentPeriodStart > lastVideoUpdate) {
-            syncTimelineWithVideo();
-        } else {
+
             checkSyncMode();
             currentPeriodStart = Math.max(0, currentPeriodStart-periodLength);
             asyncTimelineUpdate();
             changeDisplayTimeToPeriod();
-        }
     });
 
     $('#scrollRight').click(function() {
-        if(currentPeriodStart+periodLength <= lastVideoUpdate && currentPeriodStart+2*periodLength > lastVideoUpdate) {
-            syncTimelineWithVideo();
-        } else {
             checkSyncMode();
-            currentPeriodStart = Math.min(Math.floor(player.getDuration()-periodLength), currentPeriodStart+periodLength);
+            // currentPeriodStart = Math.min(Math.floor(player.getDuration()-periodLength), currentPeriodStart+periodLength);
+            currentPeriodStart = Math.min(Math.floor(player.getDuration()-periodLength), currentPlayerTimeFlag?Math.floor(player.getCurrentTime()):currentPeriodStart+periodLength);
+            currentPlayerTimeFlag = false;
             asyncTimelineUpdate();
             changeDisplayTimeToPeriod();
-        }
     });
 }
 
@@ -306,6 +319,7 @@ function checkSyncMode() {
 function syncTimelineWithVideo() {
     $('#syncText').html("<div class='alert alert-success'><span class='glyphicon glyphicon-check'></span> Timeline is syncronized with the video</div>");
     timelineIsSynced = true;
+    currentPlayerTimeFlag = true;
     changeDisplayPeriodToTime();
     $('.note').remove();
     updateTimeline(lastVideoUpdate);
@@ -313,14 +327,14 @@ function syncTimelineWithVideo() {
 
 function asyncTimelineUpdate() {
     $('.note').remove();
-
+    
     // Filter notes
     allNotes.forEach(function(note) {
-        if(note.startTime+periodLength < currentPeriodStart) {
+        if(note.startTime < currentPeriodStart) {
             addNoteToTimeline('pastNotes', note);
-        } else if (note.startTime+periodLength <= (currentPeriodStart+periodLength)) {
+        } else if ((note.startTime >= currentPeriodStart)&&(note.startTime <= (currentPeriodStart+periodLength))) {
             addNoteToTimeline('currentNotes', note);
-        } else {
+        } else if (note.startTime > currentPeriodStart+periodLength){
             addNoteToTimeline('futureNotes', note);
         }
     });
@@ -336,10 +350,11 @@ function asyncTimelineUpdate() {
     if( $('#futureNotes .note').length <= 0 ) {
         $('#futureNotes').html(noFutureNotesText);
     }
-    addManualSlideButtons();
-
-    setTimer();
+    
     initNoteFlip();
+    addManualSlideButtons();
+    // setTimer(); //TODO: Test if it is a legacy code
+
 }
 
 /**
@@ -368,14 +383,14 @@ function addNoteToTimeline(dom, note) {
             $('#futureNotes #note'+note.fakeId).remove();
             break;
     }
-
+    
     $('#'+dom+' .noNotesText').hide();
     var prevNote = findPrevNote(dom, note.startTime);
-
-    if (prevNote !== null) { // prevNote found, add after the prevNote
-        prevNote.after(createNote(note));
+    var newNote = createNote(note)
+    if (prevNote != null) { // prevNote found, add after the prevNote
+        prevNote.after(newNote);
     } else { // no notes found, add at beginning of timeline
-        $("#timeline #"+dom).prepend(createNote(note));
+        $("#timeline #"+dom+" .noNotesText").before($(newNote));
     }
     $('#note'+note.fakeId).fadeIn();
 }
@@ -403,9 +418,8 @@ function createNote(note) {
     } else {
         content = note.content;
     }
-
-    return "<div style='display:none' id='note"+note.fakeId+"' class='note' data-start='" + note.startTime + "' data-user='"+username+"' data-content='"+content+"'>" +
-                "<p>" + title + " </p>"
+    return "<div id='note"+note.fakeId+"' class='note' data-start='" + note.startTime + "' data-user='"+username+"' data-content='"+content+"'>" +
+                "<p>" + title + " </p><span class='note-time'>"+ convertSecToTime(note.startTime)+"</span>"+
            "</div>";
 }
 
@@ -457,3 +471,4 @@ function convertTimeToSec() {
     split = time.split(':');
     return parseInt(split[0])*60+parseInt(split[1]);
 }
+
