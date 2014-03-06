@@ -98,7 +98,7 @@
         $("#my-videos").click(function () {
             if (showVideos == ALL_VIDEOS) {
                 showVideos = MY_VIDEOS;
-                $scope.videos = $filter('filterVideoByOwner')($scope.videos);
+                $scope.videos = $filter('filterVideoByOwner')($scope.backupVideos);
                 $scope.$apply();
                 $("#my-videos").addClass("active");
                 $("#my-notes").removeClass("active");
@@ -118,10 +118,14 @@
         $("#my-notes").click(function () {
             if (showNotes == ALL_NOTES) {
                 showNotes = MY_NOTES;
-                $scope.videos = $filter('filterNoteByOwner')($scope.videos);
+                $scope.videos = $filter('filterNoteByOwner')($scope.backupVideos);
+                console.log("1111");
+                console.log($scope.videos);
                 $scope.$apply();
                 $("#my-notes").addClass("active");
                 $("#my-videos").removeClass("active");
+                $(".select-notes-item").show();
+                $(".select-videos-item").hide();
                 showVideos = ALL_VIDEOS;
                 $("#my-notes").find("a").append('<i class="glyphicon glyphicon-ok"></i>');
                 $("#my-videos").find("a>.glyphicon-ok").remove();
@@ -132,6 +136,8 @@
                 $scope.$apply();
                 $("#my-notes").removeClass("active");
                 $("#my-notes").find("a>.glyphicon-ok").remove();
+                $(".select-notes-item").hide();
+                $(".select-videos-item").show();
             }
         })
 
@@ -188,6 +194,7 @@
 
         return function (items) {
             var matchedVideos = [];
+            console.log(items);
             angular.forEach(items, function (item) {
                 var itemCopy = Object.create(item);
                 itemCopy.notes = [];

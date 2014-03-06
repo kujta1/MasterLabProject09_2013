@@ -43,10 +43,13 @@ public class VideoController extends Controller {
 		String userEmail = request.params.get("user-email-data");
 
 		User user = User.findByEmail(userEmail);
+
 		if (user == null) {
-			new User(userEmail, request.params.get("user-name-data"),
-					request.params.get("user-id-data")).save();
-		}
+			user = new User(userEmail, request.params.get("user-name-data"),
+					request.params.get("user-id-data"));
+            user.save();
+            System.out.println(user);
+        }
 
 		int year = Calendar.getInstance().get(Calendar.YEAR)-1900;
 		int month = Calendar.getInstance().get(Calendar.MONTH);
