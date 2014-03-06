@@ -14,45 +14,26 @@
     *{$scope.videos = "${videos.asJsonArray}";}*
 </script>
 <style>
-    ul.nav li.dropdown *:hover ul.dropdown-menu {
-        display: block;
-        margin: 0;
-    }
-
-    a.menu:after, .dropdown-toggle:after {
+    a.datepicker:after, a.datepicker:before {
         content: none;
     }
+
 </style>
 #{set 'filterOptions'}
 <nav class="navbar navbar-default filter-oprions" role="navigation">
     <div class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
             <li class="dropdown">
-                <a href="#" id="select-all" class="dropdown-toggle" data-toggle="dropdown">Notes&Videos <b
+                <a href="#" id="select-videos" class="dropdown-toggle" data-toggle="dropdown">Videos<b
                         class="caret"></b></a>
-                <ul id="content-type" class="dropdown-menu">
+                <ul class="dropdown-menu">
                     <li id="select-notes"><a href="#">Notes</a></li>
-                    <li id="select-videos"><a href="#">Videos</a></li>
                 </ul>
             </li>
-        *{<li class="dropdown" id="content-date">}*
-        *{<a href="#" class="dropdown-toggle" data-toggle="dropdown">Date<b class="caret"></b></a>}*
-        *{<ul class="dropdown-menu">}*
-        *{<li>}*
-        *{<div class="input-group date datepicker" data-date-format="dd-mm-yyyy">}*
-        *{<input type="text" class="form-control"> <span class="input-group-addon"><i}*
-        *{class="glyphicon glyphicon-calendar"></i></span>}*
+            <li><a href="#" class="datepicker" ng-model="search.uploadDate" data-date-format="dd.mm.yyyy">
+                <span class="glyphicon glyphicon-calendar"></span> <span id="date">Date</span>
+            </a></li>
 
-        *{<div class="input-group date datepicker">}*
-        *{<input type="text" class="form-control"}*
-        *{ng-model="searchUploadDate"><span class="input-group-addon"><i}*
-        *{class="glyphicon glyphicon-th"></i></span>}*
-        *{</div>}*
-
-        *{</div>}*
-        *{</li>}*
-        *{</ul>}*
-        *{</li>}*
             <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Sort<b class="caret"></b></a>
                 <ul class="dropdown-menu">
@@ -70,40 +51,36 @@
 #{/set}
 
 <div class="row" id="searchObjResults">
-*{| nestedSearch:search}*
-    <div class="row" ng-repeat="video in videos |nestedSearch:search | orderBy:predicate:reverse">
-        <div class="col-md-2 select-item select-videos-item" style="margin:5px 10px; min-width: 80px;">
-            <div class="thumbnail">
-                <a href="/video/{{video.url}}#header">
-                    <img alt="300x200" src="http://img.youtube.com/vi/{{video.url}}/0.jpg">
-                </a>
+
+    <div class="col-md-2 select-videos-item" style="margin:5px 10px; min-width: 80px;"
+         ng-repeat="video in videos | filter:search | orderBy:predicate:reverse">
+        <div class="thumbnail">
+            <a href="/video/{{video.url}}#header">
+                <img alt="300x200" src="http://img.youtube.com/vi/{{video.url}}/0.jpg">
+            </a>
+
+            <div class="caption">
+                <p> {{video.title}} {{video.uploadDate|date:'dd.mm.yyyy'}}</p>
+
+                <p><a class="btn btn-default btn-xs" href="/video/{{video.url}}#header">Show</a></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="raw" ng-repeat="video in videos">
+        <div class="col-md-2 select-notes-item" style="display:none" ng-repeat="note in video.notes | filter:search"
+             style="margin:5px 10px; min-width: 80px;">
+            <div class="thumbnail" style="background-color: #E5E5EE">
+                <img alt="300x200" src="http://img.youtube.com/vi/{{video.url}}/0.jpg">
 
                 <div class="caption">
-                    <p> {{video.title}} </p>
+                    <p> {{note.title}} </p>
 
                     <p><a class="btn btn-default btn-xs" href="/video/{{video.url}}#header">Show</a></p>
                 </div>
             </div>
-
         </div>
-
-        *{<div class="row">}*
-            <div class="col-md-2 select-item select-notes-item" ng-repeat="note in video.notes | filter:search">
-                <div class="thumbnail" style="background-color: #E5E5EE">
-
-                    <div class="caption">
-                        <p> {{note.title}} </p>
-
-                        <p><a class="btn btn-default btn-xs" href="/video/{{video.url}}#header">Show</a></p>
-                    </div>
-                </div>
-            </div>
-
-        *{</div>}*
-
     </div>
-
-
 </div>
 
 
@@ -123,16 +100,17 @@
                 showVideos = MY_VIDEOS;
                 $scope.videos = $filter('filterVideoByOwner')($scope.videos);
                 $scope.$apply();
-                $("#my-videos").toggleClass("active");
+                $("#my-videos").addClass("active");
+                $("#my-notes").removeClass("active");
+                showNotes = ALL_NOTES;
                 $("#my-videos").find("a").append('<i class="glyphicon glyphicon-ok"></i>');
-
-
+                $("#my-notes").find("a>.glyphicon-ok").remove();
             }
             else {
                 showVideos = ALL_VIDEOS;
                 $scope.videos = $scope.backupVideos;
                 $scope.$apply();
-                $("#my-videos").toggleClass("active");
+                $("#my-videos").removeClass("active");
                 $("#my-videos").find("a>.glyphicon-ok").remove();
             }
         });
@@ -142,37 +120,49 @@
                 showNotes = MY_NOTES;
                 $scope.videos = $filter('filterNoteByOwner')($scope.videos);
                 $scope.$apply();
-                $("#my-notes").toggleClass("active");
+                $("#my-notes").addClass("active");
+                $("#my-videos").removeClass("active");
+                showVideos = ALL_VIDEOS;
                 $("#my-notes").find("a").append('<i class="glyphicon glyphicon-ok"></i>');
-
-
+                $("#my-videos").find("a>.glyphicon-ok").remove();
             }
             else {
                 showNotes = ALL_NOTES;
                 $scope.videos = $scope.backupVideos;
                 $scope.$apply();
-                $("#my-notes").toggleClass("active");
+                $("#my-notes").removeClass("active");
                 $("#my-notes").find("a>.glyphicon-ok").remove();
             }
         })
 
 
+        $('.datepicker').datepicker({
+            autoclose: true,
+            clearBtn: true
+        }).on("changeDate",function (e) {
+                    date = new Date(e.date);
+                    if (e.format('dd.mm.yyyy')) $("#date").html(e.format('dd.mm.yyyy'));
+                    else $("#date").html("Date");
+                    if (date.getDate()) {
+                        $scope.videos = $filter('filterVideoByDate')($scope.backupVideos);
+                        $scope.$apply();
+                    }
+                }).on("clearDate", function (e) {
+                    date = new Date();
+                    $scope.videos = $scope.backupVideos;
+                    $scope.$apply();
+                })
+
     });
 
-    App.filter('nestedSearch', function ($filter) {
-        return function (items, search) {
+    App.filter('filterVideoByDate', function ($filter) {
+        return function (items) {
             var matchedVideos = [];
-            var matchedNotes = [];
-
-            matchedVideos = $filter('filter')(items, search);
-            angular.forEach(items, function (video) {
-                matchedNotes = $filter('filter')(video.notes, search);
-                if (matchedNotes.length > 0) {
-//                            console.log(video);
-                    if (matchedVideos.indexOf(video) < 0) matchedVideos.push(video);
+            angular.forEach(items, function (item) {
+                if (new Date(item.uploadDate).getTime() == date.getTime()) {
+                    matchedVideos.push(item);
                 }
             });
-
             return matchedVideos;
         }
     })
@@ -180,10 +170,7 @@
     App.filter('filterVideoByOwner', function ($filter) {
         return function (items) {
             var matchedVideos = [];
-
-
             angular.forEach(items, function (item) {
-
                 if (showVideos == MY_VIDEOS) {
                     if (item.owner.email == "${session.userEmail}") {
                         matchedVideos.push(item);
@@ -192,61 +179,34 @@
                     matchedVideos.push(item);
                 }
             });
-
             return matchedVideos;
         }
     })
+
+
     App.filter('filterNoteByOwner', function ($filter) {
+
         return function (items) {
             var matchedVideos = [];
             angular.forEach(items, function (item) {
                 var itemCopy = Object.create(item);
-                console.log(itemCopy);
                 itemCopy.notes = [];
                 angular.forEach(item.notes, function (note) {
                     if (showNotes == MY_NOTES) {
-
                         if (note.noteWriter.email == "${session.userEmail}") {
-                            console.log("3333");
                             itemCopy.notes.push(note);
                             if (matchedVideos.indexOf(itemCopy) < 0) matchedVideos.push(itemCopy);
                         }
                     }
-
                     else {
                         matchedVideos.push(item);
                     }
                 });
             })
-            console.log(matchedVideos);
             return matchedVideos;
         }
     })
 
-
-    //    App.filter('filterByDate', function ($filter) {
-    //        return function (items, searchDate) {
-    //            var matchedVideos = [];
-    //            angular.forEach(items, function (video) {
-    //
-    //                if (video.uploadDate == searchDate) {
-    ////                            console.log(video);
-    //                    if (matchedVideos.indexOf(video) < 0) matchedVideos.push(video);
-    //                }
-    //            });
-    //
-    //            return matchedVideos;
-    //        }
-    //    })
-
-
-    $("#content-type>li").click(function () {
-        var id = $(this).attr("id");
-        $(".select-item").hide();
-        console.log("." + id + "-item");
-        $("." + id + "-item").show();
-
-    })
 
     var MY_NOTES = 1;
     var ALL_NOTES = 2;
@@ -254,32 +214,17 @@
     var MY_VIDEOS = 1;
     var ALL_VIDEOS = 2;
     var showVideos = ALL_VIDEOS;
+    var date = new Date();
 
-    $("#select-all").click(function () {
+    $("#select-videos").click(function () {
         $(".select-videos-item").show();
+        $(".select-notes-item").hide();
+    })
+
+    $("#select-notes").click(function () {
         $(".select-notes-item").show();
+        $(".select-videos-item").hide();
     })
 
-    $('.datepicker').datepicker({
-        autoclose: true
-    });
 
-
-    $(document).on('click', 'td.day, td.month, th.next, th.prev, th.switch, td.year', function (e) {
-        setTimeout(function () {
-        }, 1000);
-        e.stopPropagation();
-    });
-
-    $(".datepicker>input").change(function () {
-
-    });
-
-    $('#content-date').on("click", "ul li *", function (e) {
-        e.stopPropagation();
-    });
-
-    $(document).ready(function () {
-
-    })
 </script>
