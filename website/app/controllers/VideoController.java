@@ -3,12 +3,14 @@ package controllers;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
-import models.Tag;
 import models.User;
 import models.Video;
 import play.mvc.Controller;
 
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 public class VideoController extends Controller {
 
@@ -31,7 +33,7 @@ public class VideoController extends Controller {
 	}
 
 	public static void saveVideo() {
-		String title = request.params.get("video-title");
+        String title = request.params.get("video-title");
 		String desc = request.params.get("video-description");
 
 		/* TODO: add thumbnail to Video class */
@@ -46,15 +48,17 @@ public class VideoController extends Controller {
 					request.params.get("user-id-data")).save();
 		}
 
-		int year = Calendar.getInstance().get(Calendar.YEAR);
+		int year = Calendar.getInstance().get(Calendar.YEAR)-1900;
 		int month = Calendar.getInstance().get(Calendar.MONTH);
 		int day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
 
 		Video video = new Video(title, desc, link, new Date(year, month, day), user);
 		video.save();
 
-		
-	}
+        video(video.url);
+
+
+    }
 
 	public static void video(String url) {
         List<Video> searchResult =  Video.find("url", url).fetch();

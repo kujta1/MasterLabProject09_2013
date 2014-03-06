@@ -60,7 +60,7 @@
             </a>
 
             <div class="caption">
-                <p> {{video.title}} {{video.uploadDate|date:'dd.mm.yyyy'}}</p>
+                <p> {{video.title}} </p>
 
                 <p><a class="btn btn-default btn-xs" href="/video/{{video.url}}#header">Show</a></p>
             </div>
@@ -215,6 +215,7 @@
     var ALL_VIDEOS = 2;
     var showVideos = ALL_VIDEOS;
     var date = new Date();
+    var userEmail = "${session.userEmail}";
 
     $("#select-videos").click(function () {
         $(".select-videos-item").show();

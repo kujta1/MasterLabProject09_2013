@@ -11,7 +11,10 @@ import play.modules.elasticsearch.annotations.ElasticSearchable;
 import play.modules.elasticsearch.search.SearchResults;
 import play.mvc.Scope.Session;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.Lob;
+import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -19,65 +22,68 @@ import java.util.List;
 @ElasticSearchable
 @Entity(name = "Videos")
 public class Video extends Model {
-	@Required
+    @Required
     @Expose
-	public String title;
-	@Lob
+    public String title;
+    @Lob
     @Expose
     public String description;
-	@Required
+    @Required
     @Expose
     public String url;
-	@ElasticSearchIgnore
+    @ElasticSearchIgnore
     @Expose
     public Date uploadDate;
-//	@ElasticSearchEmbedded(fields = { "title" })
+    //	@ElasticSearchEmbedded(fields = { "title" })
 //	@OneToMany
 //	public List<Tag> tags;
-	@ElasticSearchIgnore
-	@ManyToOne
+    @ElasticSearchIgnore
+    @ManyToOne
     @Expose
-	public User owner;
-	@ElasticSearchIgnore
-	@ManyToMany(mappedBy = "watchedVideos")
-	public List<User> whatchers;
-	@ElasticSearchEmbedded(mode = Mode.embedded)
-	@ManyToMany
+    public User owner;
+    @ElasticSearchIgnore
+    @ManyToMany(mappedBy = "watchedVideos")
+    public List<User> whatchers;
+    @ElasticSearchEmbedded(mode = Mode.embedded)
+    @ManyToMany
     @Expose
     // (mappedBy = "video")
-	// @OneToMany
-	public List<Note> notes;
+    // @OneToMany
+    public List<Note> notes;
 
-	public Video(String title, String description, String url, Date uploadDate, User owner) {
-		super();
-		this.title = title;
-		this.description = description;
-		this.url = url;
-		this.uploadDate = uploadDate;
+    public Video(String title, String description, String url, Date uploadDate, User owner) {
+        super();
+        this.title = title;
+        System.out.println(title);
+        this.description = description;
+        this.url = url;
+
+
+        this.uploadDate = uploadDate;
 //		this.tags = new ArrayList<Tag>();
-		this.notes = new ArrayList<Note>();
-		this.owner = owner;
-	}
-	
+        this.notes = new ArrayList<Note>();
+        this.owner = owner;
+    }
 
 
-	public static List<Video> searchQuery(String query) {
-		myVideos();
-		SearchResults<Video> list = play.modules.elasticsearch.ElasticSearch
-				.searchAndHydrate(QueryBuilders.queryString(query), Video.class);
-		return list.objects;
-	}
-   //it is duplicate
-	public static List<Video> searchQuery1(String query) {
-		SearchResults<Video> list = play.modules.elasticsearch.ElasticSearch
-				.search(QueryBuilders.queryString(query), Video.class);
-		return list.objects;
-	}
+    public static List<Video> searchQuery(String query) {
+        myVideos();
+        SearchResults<Video> list = play.modules.elasticsearch.ElasticSearch
+                .searchAndHydrate(QueryBuilders.queryString(query), Video.class);
+        return list.objects;
+    }
 
-	public static List<Video> myVideos() {
-		String googleUserId = Session.current().get("googleUserId").toString();
-		User user = User.findByGoogleID(googleUserId);
-		return find("owner", user).fetch();
-	}
+    //it is duplicate
+    public static List<Video> searchQuery1(String query) {
+        SearchResults<Video> list = play.modules.elasticsearch.ElasticSearch
+                .search(QueryBuilders.queryString(query), Video.class);
+        return list.objects;
+    }
+
+    public static List<Video> myVideos() {
+        String googleUserId = Session.current().get("googleUserId").toString();
+        User user = User.findByGoogleID(googleUserId);
+        return find("owner", user).fetch();
+    }
 
 }
